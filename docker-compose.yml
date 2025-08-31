@@ -96,6 +96,4 @@ services:
     volumes:
       - ./nextcloud/config:/config
       - ./nextcloud/data:/data
-      # Mount the same HDDs you use for Jellyfin
-      - /mnt/media1:/mnt/media1
-      - /mnt/media2:/mnt/media2
+
