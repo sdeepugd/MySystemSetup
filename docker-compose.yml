@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   media:
     driver: bridge
@@ -25,25 +23,6 @@ services:
       # Local configuration and cache directories
       - ./jellyfin/config:/config
       - ./jellyfin/cache:/cache
-    restart: unless-stopped
-
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
-    container_name: qbittorrent
-    networks:
-      - media
-    ports:
-      - 8080:8080  # Web UI
-      - 6881:6881
-      - 6881:6881/udp
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Vancouver
-      - WEBUI_PORT=8080
-    volumes:
-      - ./qbittorrent/config:/config
-      - ./media/downloads:/downloads
     restart: unless-stopped
 
   radarr:
@@ -79,3 +58,44 @@ services:
       - ./media/tv:/tv
       - ./media/downloads:/downloads
     restart: unless-stopped
+
+  # --- Nextcloud Setup ---
+  db:
+    image: mariadb:10.6
+    container_name: nextcloud-db
+    networks:
+      - media
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=supersecret
+      - MYSQL_PASSWORD=nextcloudpass
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    volumes:
+      - ./nextcloud/db:/var/lib/mysql
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    networks:
+      - media
+    ports:
+      - 8081:80   # Web UI for Nextcloud
+    links:
+      - db
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Vancouver
+      - MYSQL_PASSWORD=nextcloudpass
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
+    volumes:
+      - ./nextcloud/config:/config
+      - ./nextcloud/data:/data
+      # Mount the same HDDs you use for Jellyfin
+      - /mnt/media1:/mnt/media1
+      - /mnt/media2:/mnt/media2
